@@ -1,1 +1,1836 @@
+<html><head><base href=".">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor Financeiro - Controle de Empréstimos</title>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Poppins', sans-serif;
+    }
 
+    body {
+        background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
+        padding: 30px;
+        min-height: 100vh;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 1200px;
+        padding: 0 15px;
+        margin: 0 auto;
+        transition: all 0.3s ease;
+    }
+
+    .header {
+        background: linear-gradient(135deg, #1a3a8f 0%, #0f2557 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+        font-size: 2.2em;
+        font-weight: 600;
+    }
+
+    .carteira {
+        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        padding: 25px;
+        border-radius: 15px;
+        color: white;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .carteira-history {
+        margin-top: 15px;
+        max-height: 150px;
+        overflow-y: auto;
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    .carteira-history-item {
+        padding: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        font-size: 0.9em;
+    }
+
+    .form-section {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: #2c3e50;
+        font-weight: 500;
+        font-size: 0.95em;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #eef2f7;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #f8fafc;
+    }
+
+    input:focus, select:focus {
+        transform: translateY(-2px);
+        border-color: #4f46e5;
+        background: white;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.15);
+        outline: none;
+    }
+
+    button {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        padding: 14px 28px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    button:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(99,102,241,0.4);
+    }
+
+    button:active {
+        transform: translateY(-2px);
+    }
+
+    button::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease-out, height 0.6s ease-out;
+    }
+
+    button:active::after {
+        width: 200%;
+        height: 200%;
+    }
+
+    .dividas-list {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-top: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .divida-item {
+        padding: 25px;
+        border-radius: 15px;
+        border: 1px solid #eef2f7;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+        background: white;
+        border-left: 4px solid transparent;
+    }
+
+    .divida-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    }
+
+    @keyframes priorityPulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.8; }
+        100% { opacity: 1; }
+    }
+
+    .divida-item[style*="border-left: 4px solid #ff5e62"],
+    .divida-item[style*="border-left: 4px solid #e74c3c"] {
+        animation: priorityPulse 2s infinite;
+    }
+
+    .divida-info {
+        line-height: 1.8;
+        color: #2d3748;
+    }
+
+    .valor-parcela {
+        color: #4a5568;
+        font-size: 1.1em;
+        font-weight: 500;
+        margin-top: 5px;
+        padding: 8px;
+        background: #f7fafc;
+        border-radius: 8px;
+        display: inline-block;
+    }
+
+    #saldo {
+        font-size: 2em;
+        font-weight: 600;
+        margin: 10px 0;
+        display: block;
+    }
+
+    .error {
+        color: #e74c3c;
+        margin-top: 5px;
+        font-size: 14px;
+    }
+
+    .success {
+        color: #27ae60;
+        margin-top: 5px;
+        font-size: 14px;
+    }
+
+    .motivo-icon {
+        cursor: pointer;
+        margin-left: 8px;
+        color: #6366f1;
+        transition: all 0.3s ease;
+        font-size: 1.1em;
+    }
+
+    .motivo-icon:hover {
+        color: #4f46e5;
+        transform: scale(1.1);
+    }
+
+    .tooltip {
+        position: relative;
+        display: inline-block;
+    }
+
+    .tooltip .tooltip-text {
+        visibility: hidden;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: white;
+        text-align: center;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.9em;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        white-space: nowrap;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .tooltip:hover .tooltip-text {
+        visibility: visible;
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .filtros-container {
+        margin-bottom: 20px;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        display: flex;
+        gap: 15px;
+    }
+
+    .filtros-container input, .filtros-container select {
+        max-width: 250px;
+    }
+
+    .divida-paga-motivo {
+        margin-top: 10px;
+        padding: 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        display: none;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .divida-paga-motivo.show {
+        display: block;
+        opacity: 1;
+    }
+
+    .motivo-toggle {
+        background: transparent;
+        border: none;
+        color: #4f46e5;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 0.9em;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .motivo-toggle:hover {
+        color: #6366f1;
+        transform: translateY(0);
+        box-shadow: none;
+    }
+
+    @keyframes celebrate {
+        0% { transform: scale(0.9) rotate(-5deg); opacity: 0; }
+        25% { transform: scale(1.1) rotate(5deg); opacity: 1; }
+        50% { transform: scale(1.05) rotate(-3deg); }
+        75% { transform: scale(1.08) rotate(2deg); }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    .celebration {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        animation: celebrate 1.5s ease-in-out;
+        z-index: 1000;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    .celebration h2 {
+        font-size: 2em;
+        margin-bottom: 15px;
+    }
+
+    .celebration p {
+        font-size: 1.2em;
+        opacity: 0.9;
+    }
+
+    .dividas-pagas {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-top: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .divida-paga-item {
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 15px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    .divida-paga-header {
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+    }
+
+    .divida-paga-summary {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .divida-valor {
+        color: #4f46e5;
+        font-weight: 500;
+    }
+
+    .divida-data {
+        color: #64748b;
+        font-size: 0.9em;
+    }
+
+    .details-toggle {
+        background: transparent;
+        color: #4f46e5;
+        border: 2px solid #4f46e5;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .details-toggle:hover {
+        background: #4f46e5;
+        color: white;
+        transform: translateY(0);
+    }
+
+    .divida-paga-details {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #f8fafc;
+    }
+
+    .divida-paga-details.active {
+        max-height: 500px;
+    }
+
+    .details-content {
+        padding: 20px;
+    }
+
+    .pagamento-item {
+        padding: 8px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    #filtro-credor {
+        width: 100%;
+        max-width: 300px;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 16px;
+        color: #1e293b;
+        background: white;
+        transition: all 0.3s ease;
+    }
+
+    #filtro-credor:focus {
+        border-color: #4f46e5;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .arquivos-mensais {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-top: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    #arquivo-mes-select {
+        width: 100%;
+        max-width: 300px;
+        margin-bottom: 20px;
+    }
+
+    .arquivo-content {
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: relative;
+        background: white;
+        margin: 10% auto;
+        padding: 30px;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 15px;
+        animation: modalFloat 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    @keyframes modalFloat {
+        from {
+            opacity: 0;
+            transform: translateY(-30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+        body {
+            padding: 15px;
+        }
+
+        .header {
+            padding: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+        }
+
+        .carteira, .form-section, .dividas-list, .dividas-pagas {
+            padding: 20px;
+        }
+
+        .divida-item {
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .divida-item button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .filtros-container {
+            flex-direction: column;
+        }
+
+        .filtros-container input,
+        .filtros-container select {
+            max-width: 100%;
+        }
+
+        .export-import-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .export-import-container button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .divida-paga-header {
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .divida-paga-summary {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+    }
+
+    @media screen and (min-width: 769px) and (max-width: 1024px) {
+        .container {
+            max-width: 90%;
+        }
+
+        .divida-item {
+            padding: 20px;
+        }
+
+        .export-import-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+    }
+
+    .estatisticas-section {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        transition: transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-card h3 {
+        color: #2d3748;
+        margin-right: 10px;
+    }
+
+    .stat-card p {
+        font-size: 1.5em;
+        color: #4f46e5;
+        font-weight: 600;
+    }
+
+    .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .stat-header i {
+        cursor: pointer;
+        color: #4f46e5;
+        transition: all 0.3s ease;
+    }
+
+    .stat-header i:hover {
+        transform: scale(1.1);
+    }
+
+    .remove-btn {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .remove-btn:hover {
+        box-shadow: 0 12px 30px rgba(239, 68, 68, 0.4);
+    }
+
+    @media (hover: none) {
+        .divida-item:hover,
+        .divida-paga-item:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+    }
+
+    .divida-item,
+    .divida-paga-header,
+    .divida-paga-summary,
+    .filtros-container,
+    .export-import-container {
+        transition: all 0.3s ease;
+    }
+
+    .divida-item button,
+    .details-toggle,
+    .form-section button {
+        transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    }
+
+    .divida-item:hover,
+    .divida-paga-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .divida-item,
+    .divida-paga-item {
+        animation: fadeIn 0.3s ease forwards;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    .estorno-entry {
+        background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+        padding: 8px;
+        border-radius: 8px;
+        color: white;
+        display: inline-block;
+        margin: 2px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .info-icon {
+        color: #fff;
+        margin-left: 8px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+    .info-icon:hover {
+        transform: scale(1.1);
+    }
+
+    .carteira-history-item .tooltip-text {
+        width: max-content;
+        max-width: 250px;
+        line-height: 1.4;
+    }
+
+    .retificar-btn {
+        background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+        margin-left: 10px;
+    }
+
+    .divida-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    #dividas-mes-credor {
+        text-align: left;
+        margin-top: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    #dividas-mes-credor::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    #dividas-mes-credor::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    #dividas-mes-credor::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+
+    #dividas-mes-credor::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Gestor Financeiro</h1>
+        </div>
+
+        <div class="estatisticas-section">
+            <h2>Estatísticas</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Total de Dívidas</h3>
+                        <i id="icon-total-dividas" class="fas fa-eye-slash" onclick="toggleStatVisibility('total-dividas')"></i>
+                    </div>
+                    <p>R$ <span id="total-dividas" style="visibility: hidden;">0.00</span></p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Dívidas do Mês</h3>
+                        <i id="icon-total-dividas-mes" class="fas fa-eye-slash" onclick="toggleStatVisibility('total-dividas-mes')"></i>
+                    </div>
+                    <p>R$ <span id="total-dividas-mes" style="visibility: hidden;">0.00</span></p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Total Pago</h3>
+                        <i id="icon-total-dividas-pagas" class="fas fa-eye-slash" onclick="toggleStatVisibility('total-dividas-pagas')"></i>
+                    </div>
+                    <p>R$ <span id="total-dividas-pagas" style="visibility: hidden;">0.00</span></p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>Total do Mês por Credor</h3>
+                        <i id="icon-dividas-mes-credor" class="fas fa-eye-slash" onclick="toggleStatVisibility('dividas-mes-credor')"></i>
+                    </div>
+                    <div id="dividas-mes-credor" style="visibility: hidden">
+                        <!-- Content will be dynamically populated -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="carteira">
+            <h2>Carteira</h2>
+            <p>Saldo atual: R$ <span id="saldo">0.00</span></p>
+            <div class="form-group">
+                <label>Adicionar valor à carteira:</label>
+                <input type="number" id="valor-carteira" step="0.01" min="0" placeholder="Digite o valor" onkeypress="return isNumberOrDot(event)">
+                <button onclick="adicionarSaldo()">Adicionar</button>
+            </div>
+            <div class="carteira-history">
+                <h3>Histórico de Transações</h3>
+                <div id="historico-carteira"></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Cadastrar Nova Dívida</h2>
+            <div class="form-group">
+                <label>Nome do Credor:</label>
+                <input type="text" id="credor" required="">
+            </div>
+            <div class="form-group">
+                <label>Motivo (opcional):</label>
+                <input type="text" id="motivo" placeholder="Digite o motivo da dívida">
+            </div>
+            <div class="form-group">
+                <label>Forma de Pagamento:</label>
+                <select id="forma-pagamento">
+                    <option value="cartao">Cartão</option>
+                    <option value="dinheiro">Dinheiro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tipo de Pagamento:</label>
+                <select id="tipo-pagamento" onchange="toggleParcelas()">
+                    <option value="avista">À Vista</option>
+                    <option value="parcelado">Parcelado</option>
+                </select>
+            </div>
+            <div class="form-group" id="parcelas-group" style="display: none;">
+                <label>Número de Parcelas:</label>
+                <input type="number" id="num-parcelas" min="2" value="2">
+            </div>
+            <div class="form-group">
+                <label>Valor Total:</label>
+                <input type="number" id="valor" step="0.01" min="0" required="" onkeypress="return isNumberOrDot(event)">
+            </div>
+            <div class="form-group">
+                <label>Data de Vencimento:</label>
+                <input type="date" id="vencimento" required="">
+            </div>
+            <button onclick="cadastrarDivida()">Cadastrar Dívida</button>
+        </div>
+
+        <div class="dividas-list">
+            <h2>Dívidas Cadastradas</h2>
+            <div class="filtros-container">
+                <select id="filtro-credor" onchange="atualizarListaDividas()">
+                    <option value="">Todos os credores</option>
+                </select>
+            </div>
+            <div id="lista-dividas">
+<!-- Mantido vazio, pois é dinâmico, o ajuste está no código JavaScript -->
+</div>
+        </div>
+
+        <div class="dividas-pagas">
+            <h2>Dívidas Pagas</h2>
+            <div class="filtros-container">
+                <select id="filtro-credor" onchange="filtrarDividasPagas()">
+                    <option value="">Todos os credores</option>
+                </select>
+                <input type="date" id="filtro-data" onchange="filtrarDividasPagas()">
+            </div>
+            <div id="lista-dividas-pagas"></div>
+        </div>
+
+        <div class="arquivos-mensais">
+            <h2>Arquivos Mensais</h2>
+            <select id="arquivo-mes-select" onchange="carregarArquivoMensal()">
+                <option value="">Selecione um mês</option>
+            </select>
+            <div id="arquivo-mensal-content" class="arquivo-content">
+                <!-- Content loaded dynamically -->
+            </div>
+        </div>
+
+        <div id="retificacao-modal" class="modal">
+            <div class="modal-content">
+                <h3>Retificar Pagamento</h3>
+                <select id="motivo-retificacao">
+                    <option value="erro_pagamento">Paguei errado</option>
+                    <option value="clique_acidental">Cliquei sem querer</option>
+                    <option value="valor_incorreto">Valor incorreto</option>
+                    <option value="outro">Outro motivo</option>
+                </select>
+                <textarea id="descricao-retificacao" placeholder="Detalhes adicionais..."></textarea>
+                <div class="modal-buttons">
+                    <button onclick="confirmarRetificacao()">Confirmar</button>
+                    <button onclick="fecharModal()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="export-import-container">
+            <button onclick="exportarXLSX()">
+    <i class="fas fa-file-export"></i>
+    Exportar Excel
+</button>
+            <button onclick="importarXLSX()">
+                <i class="fas fa-file-import"></i>
+                Importar Excel
+            </button>
+            <button onclick="exportarModeloVazio()">
+                <i class="fas fa-file-alt"></i>
+                Modelo Vazio
+            </button>
+        </div>
+    </div>
+
+<script>
+let saldoCarteira = 0;
+let dividas = [];
+let dividasPagas = [];
+let historicoCarteira = [];
+let arquivoMensal = {};
+let historicoRetificacoes = [];
+
+function salvarDados() {
+    const dados = {
+        saldoCarteira,
+        dividas,
+        dividasPagas,
+        historicoCarteira,
+        arquivoMensal,
+        historicoRetificacoes,
+        ultimaAtualizacao: new Date().toISOString()
+    };
+    
+    try {
+        localStorage.setItem('gestorFinanceiro', JSON.stringify(dados));
+        localStorage.setItem('gestorFinanceiroBackup', JSON.stringify(dados));
+    } catch (e) {
+        console.error('Erro ao salvar dados:', e);
+    }
+}
+
+function carregarDados() {
+    try {
+        const dadosSalvos = localStorage.getItem('gestorFinanceiro');
+        
+        if (!dadosSalvos) {
+            const backup = localStorage.getItem('gestorFinanceiroBackup');
+            if (backup) {
+                carregarDadosSalvos(JSON.parse(backup));
+                console.log('Dados restaurados do backup');
+                return;
+            }
+            return;
+        }
+        
+        carregarDadosSalvos(JSON.parse(dadosSalvos));
+        atualizarEstatisticas();
+    } catch (e) {
+        console.error('Erro ao carregar dados:', e);
+        const backup = localStorage.getItem('gestorFinanceiroBackup');
+        if (backup) {
+            try {
+                carregarDadosSalvos(JSON.parse(backup));
+                console.log('Dados restaurados do backup após erro');
+            } catch (e) {
+                console.error('Erro ao carregar backup:', e);
+            }
+        }
+    }
+}
+
+function carregarDadosSalvos(dados) {
+    if (!dados) return;
+    
+    saldoCarteira = dados.saldoCarteira || 0;
+    dividas = dados.dividas || [];
+    dividasPagas = dados.dividasPagas || [];
+    historicoCarteira = dados.historicoCarteira || [];
+    arquivoMensal = dados.arquivoMensal || {};
+    historicoRetificacoes = dados.historicoRetificacoes || [];
+    
+    historicoCarteira = historicoCarteira.map(h => ({
+        ...h,
+        data: new Date(h.data)
+    }));
+    
+    dividasPagas = dividasPagas.map(d => ({
+        ...d,
+        dataPagamento: new Date(d.dataPagamento),
+        historioPagamentos: d.historioPagamentos.map(p => ({
+            ...p,
+            data: new Date(p.data)
+        }))
+    }));
+    
+    document.getElementById('saldo').textContent = saldoCarteira.toFixed(2);
+    atualizarHistoricoCarteira();
+    atualizarListaDividas();
+    atualizarListaDividasPagas();
+    atualizarFiltroCredores();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarDados();
+});
+
+window.addEventListener('beforeunload', function() {
+    salvarDados();
+});
+
+setInterval(salvarDados, 30000);
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+        salvarDados();
+    }
+});
+
+function formatarData(data) {
+    return new Date(data).toLocaleDateString('pt-BR');
+}
+
+function isNumberOrDot(event) {
+    const charCode = (event.which) ? event.which : event.keyCode;
+    if (charCode === 46) {
+        return !event.target.value.includes('.');
+    }
+    return charCode >= 48 && charCode <= 57;
+}
+
+function adicionarSaldo() {
+    const valor = parseFloat(document.getElementById('valor-carteira').value);
+    if (isNaN(valor) || valor <= 0) {
+        alert('Por favor, insira um valor válido!');
+        return;
+    }
+    saldoCarteira += valor;
+    
+    const data = new Date();
+    historicoCarteira.push({
+        valor: valor,
+        data: data,
+        tipo: 'entrada'
+    });
+    
+    atualizarHistoricoCarteira();
+    document.getElementById('saldo').textContent = saldoCarteira.toFixed(2);
+    document.getElementById('valor-carteira').value = '';
+    salvarDados();
+}
+
+function atualizarHistoricoCarteira() {
+    const historico = document.getElementById('historico-carteira');
+    historico.innerHTML = '';
+    
+    historicoCarteira.slice().reverse().forEach(transacao => {
+        const div = document.createElement('div');
+        div.className = 'carteira-history-item';
+        const dataFormatada = formatarData(transacao.data);
+        
+        let styleClass = '';
+        let icon = '';
+        
+        if (transacao.tipo === 'estorno') {
+            styleClass = 'estorno-entry';
+            icon = `<span class="tooltip">
+                <i class="fas fa-info-circle info-icon"></i>
+                <span class="tooltip-text">
+                    Motivo: ${transacao.motivo}<br>
+                    Descrição: ${transacao.descricao}
+                </span>
+            </span>`;
+        }
+        
+        div.innerHTML = `
+            <span class="${styleClass}">
+                ${dataFormatada} - 
+                R$ ${transacao.valor.toFixed(2)} 
+                (${transacao.tipo === 'entrada' ? 'Entrada' : 
+                   transacao.tipo === 'estorno' ? 'Estorno' : 'Saída'})
+                ${icon}
+            </span>
+        `;
+        historico.appendChild(div);
+    });
+}
+
+function toggleParcelas() {
+    const tipoPagamento = document.getElementById('tipo-pagamento').value;
+    document.getElementById('parcelas-group').style.display = 
+        tipoPagamento === 'parcelado' ? 'block' : 'none';
+}
+
+function capitalize(text) {
+    if (!text) return '';
+    return text.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
+function cadastrarDivida() {
+    const credor = capitalize(document.getElementById('credor').value);
+    const motivo = capitalize(document.getElementById('motivo').value);
+    const formaPagamento = document.getElementById('forma-pagamento').value;
+    const tipoPagamento = document.getElementById('tipo-pagamento').value;
+    const valor = parseFloat(document.getElementById('valor').value);
+    const vencimento = document.getElementById('vencimento').value;
+    const numParcelas = tipoPagamento === 'parcelado' ? 
+        parseInt(document.getElementById('num-parcelas').value) : 1;
+
+    if (!credor || !valor || !vencimento) {
+        alert('Preencha todos os campos obrigatórios!');
+        return;
+    }
+
+    const divida = {
+        id: Date.now(),
+        credor,
+        motivo,
+        formaPagamento,
+        tipoPagamento,
+        valorTotal: valor,
+        valorRestante: valor,
+        vencimento,
+        numParcelas,
+        parcelasRestantes: numParcelas,
+        valorParcela: tipoPagamento === 'parcelado' ? valor / numParcelas : valor,
+        proximaParcelaValor: tipoPagamento === 'parcelado' ? valor / numParcelas : valor,
+        historioPagamentos: []
+    };
+
+    dividas.push(divida);
+    atualizarListaDividas();
+    atualizarFiltroCredores();
+    atualizarEstatisticas();
+    limparFormulario();
+    salvarDados();
+}
+
+function mostrarCelebracao() {
+    const div = document.createElement('div');
+    div.className = 'celebration';
+    div.innerHTML = `
+        <h2>🎉 Parabéns! 🎉</h2>
+        <p>Você quitou mais uma dívida!</p>
+        <p style="font-size: 3em; margin: 15px 0;">🏆</p>
+        <p style="font-size: 0.9em; opacity: 0.8;">Continue assim!</p>
+    `;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 1500);
+}
+
+function moverParaDividasPagas(divida) {
+    divida.dataPagamento = new Date();
+    divida.historioPagamentos.sort((a, b) => a.data - b.data);
+    dividasPagas.push(divida);
+    dividas = dividas.filter(d => d.id !== divida.id);
+    atualizarListaDividasPagas();
+}
+
+function abaterDivida(id) {
+    const divida = dividas.find(d => d.id === id);
+    const valorAbate = parseFloat(prompt('Quanto deseja abater desta dívida?'));
+
+    if (isNaN(valorAbate) || valorAbate <= 0) {
+        alert('Por favor, insira um valor válido!');
+        return;
+    }
+
+    if (valorAbate > saldoCarteira) {
+        alert('Saldo insuficiente na carteira!');
+        return;
+    }
+
+    if (valorAbate > divida.valorRestante) {
+        alert('Valor de abatimento maior que a dívida restante!');
+        return;
+    }
+
+    const pagamento = {
+        data: new Date(),
+        valor: valorAbate,
+        dividaId: divida.id,
+        dividaCredor: divida.credor
+    };
+
+    divida.historioPagamentos.push(pagamento);
+    
+    if (divida.valorRestante - valorAbate <= 0) {
+        saldoCarteira -= divida.valorRestante;
+        mostrarCelebracao();
+        moverParaDividasPagas(divida);
+    } else {
+        saldoCarteira -= valorAbate;
+        divida.valorRestante -= valorAbate;
+
+        if (divida.tipoPagamento === 'parcelado') {
+            const parcelasInteiras = Math.floor(valorAbate / divida.valorParcela);
+            const valorRestanteAbate = valorAbate % divida.valorParcela;
+            
+            divida.parcelasRestantes = Math.max(0, divida.parcelasRestantes - parcelasInteiras);
+            
+            if (parcelasInteiras > 0) {
+                const currentDate = new Date(divida.vencimento);
+                currentDate.setMonth(currentDate.getMonth() + parcelasInteiras);
+                divida.vencimento = currentDate.toISOString().split('T')[0];
+            }
+            
+            if (valorRestanteAbate > 0) {
+                divida.proximaParcelaValor = divida.valorParcela - valorRestanteAbate;
+            } else {
+                divida.proximaParcelaValor = divida.valorParcela;
+            }
+            
+            if (divida.valorRestante < divida.valorParcela) {
+                divida.proximaParcelaValor = divida.valorRestante;
+            }
+        }
+    }
+
+    document.getElementById('saldo').textContent = saldoCarteira.toFixed(2);
+    atualizarHistoricoCarteira();
+    atualizarListaDividas();
+    atualizarEstatisticas();
+}
+
+function atualizarListaDividas() {
+    const lista = document.getElementById('lista-dividas');
+    lista.innerHTML = '';
+
+    const filtroCredor = document.getElementById('filtro-credor').value;
+    
+    let dividasFiltradas = dividas;
+    if (filtroCredor) {
+        dividasFiltradas = dividas.filter(d => d.credor === filtroCredor);
+    }
+    
+    const dividasOrdenadas = dividasFiltradas.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
+    
+    dividasOrdenadas.forEach(divida => {
+        const proximoPagamento = divida.tipoPagamento === 'parcelado' ? 
+            (divida.proximaParcelaValor || divida.valorParcela) : 
+            divida.valorRestante;
+
+        const hoje = new Date();
+        const vencimento = new Date(divida.vencimento);
+        const diasRestantes = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
+        
+        const isPriority = diasRestantes <= 5 && diasRestantes >= 0;
+        const isOverdue = diasRestantes < 0;
+        
+        const priorityStyle = isPriority ? 
+            'border-left: 4px solid #ff5e62; background: rgba(255,94,98,0.05);' : 
+            isOverdue ? 
+            'border-left: 4px solid #e74c3c; background: rgba(231,76,60,0.05);' : '';
+
+        const alertBadge = (isPriority || isOverdue) ? `
+            <div style="
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                font-weight: 500;
+                margin-left: 10px;
+                background: ${isOverdue ? '#e74c3c' : '#ff5e62'};
+                color: white;
+            ">
+                ${isOverdue ? 'ATRASADA' : 'PRÓXIMA DO VENCIMENTO'}
+            </div>
+        ` : '';
+
+        const div = document.createElement('div');
+        div.className = 'divida-item';
+        div.style = priorityStyle;
+        div.innerHTML = `
+            <div class="divida-info">
+                <strong style="font-size: 1.2em; color: #2d3748;">
+                    ${divida.credor}
+                    ${alertBadge}
+                </strong>
+                ${divida.motivo ? `
+                    <span class="tooltip">
+                        <i class="fas fa-info-circle motivo-icon" title="Mostrar motivo"></i>
+                        <span class="tooltip-text">${divida.motivo}</span>
+                    </span>
+                ` : ''}<br>
+                <span style="color: #718096;">Forma: ${divida.formaPagamento}</span><br>
+                <span style="color: #718096;">Tipo: ${divida.tipoPagamento}</span><br>
+                ${divida.tipoPagamento === 'parcelado' ? 
+                    `<span style="color: #718096;">Parcelas: ${divida.parcelasRestantes}/${divida.numParcelas}</span><br>` : ''}
+                <span style="color: #2d3748; font-weight: 500;">Valor Restante: R$ ${divida.valorRestante.toFixed(2)}</span><br>
+                <span style="color: ${isOverdue ? '#e74c3c' : '#718096'};">
+                    Vencimento: ${formatarData(divida.vencimento)}
+                    ${diasRestantes >= 0 ? `(em ${diasRestantes} dias)` : `(atrasada há ${Math.abs(diasRestantes)} dias)`}
+                </span>
+                <div class="valor-parcela">
+                    Próximo pagamento: R$ ${proximoPagamento.toFixed(2)}
+                </div>
+            </div>
+            <div class="divida-buttons">
+                <button onclick="abaterDivida(${divida.id})">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    Abater
+                </button>
+                ${divida.historioPagamentos.length > 0 ? `
+                    <button onclick="retificarPagamento(${divida.id}, false)" class="retificar-btn">
+                        <i class="fas fa-undo"></i>
+                        Retificar
+                    </button>
+                ` : ''}
+                <button onclick="removerDivida(${divida.id})" class="remove-btn">
+                    <i class="fas fa-trash"></i>
+                    Remover
+                </button>
+            </div>
+        `;
+        lista.appendChild(div);
+    });
+}
+
+function atualizarListaDividasPagas(dividasFiltradas = dividasPagas) {
+    const lista = document.getElementById('lista-dividas-pagas');
+    lista.innerHTML = '';
+
+    dividasFiltradas.forEach(divida => {
+        const div = document.createElement('div');
+        div.className = 'divida-paga-item';
+        
+        div.innerHTML = `
+            <div class="divida-paga-header">
+                <div class="divida-paga-summary">
+                    <strong>${divida.credor}</strong>
+                    <span class="divida-valor">R$ ${divida.valorTotal.toFixed(2)}</span>
+                    <span class="divida-data">${formatarData(divida.dataPagamento)}</span>
+                </div>
+                <button class="details-toggle" onclick="toggleDividaDetails('${divida.id}')">
+                    <i class="fas fa-chevron-down"></i>
+                    Detalhes
+                </button>
+            </div>
+            <div class="divida-paga-details" id="details-${divida.id}">
+                <div class="details-content">
+                    <p><strong>Forma:</strong> ${divida.formaPagamento}</p>
+                    <p><strong>Tipo:</strong> ${divida.tipoPagamento}</p>
+                    ${divida.motivo ? `
+                        <div class="motivo-section">
+                            <strong>Motivo:</strong> ${divida.motivo}
+                        </div>
+                    ` : ''}
+                    <div class="historico-pagamento">
+                        <strong>Histórico de Pagamentos:</strong>
+                        ${divida.historioPagamentos.map(pag => `
+                            <div class="pagamento-item">
+                                ${formatarData(pag.data)} - R$ ${pag.valor.toFixed(2)}
+                                <button onclick="retificarPagamento('${String(divida.id)}', true)"><i class="fas fa-pencil-alt"></i> Retificar</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        lista.appendChild(div);
+    });
+}
+
+function toggleDividaDetails(id) {
+    const detailsElement = document.getElementById(`details-${id}`);
+    const button = detailsElement.previousElementSibling.querySelector('.details-toggle i');
+    
+    if (detailsElement.classList.contains('active')) {
+        detailsElement.classList.remove('active');
+        button.classList.remove('fa-chevron-up');
+        button.classList.add('fa-chevron-down');
+    } else {
+        detailsElement.classList.add('active');
+        button.classList.remove('fa-chevron-down');
+        button.classList.add('fa-chevron-up');
+    }
+}
+
+function filtrarDividasPagas() {
+    const filtroCredor = document.getElementById('filtro-credor').value.toLowerCase();
+    const filtroData = document.getElementById('filtro-data').value;
+    
+    const dividasFiltradas = dividasPagas.filter(divida => {
+        const matchCredor = divida.credor.toLowerCase().includes(filtroCredor);
+        
+        if (filtroData) {
+            const dataFiltro = new Date(filtroData);
+            const dataPagamento = new Date(divida.dataPagamento);
+            const matchData = dataFiltro.toDateString() === dataPagamento.toDateString();
+            return matchCredor && matchData;
+        }
+        
+        return matchCredor;
+    });
+    
+    atualizarListaDividasPagas(dividasFiltradas);
+}
+
+function atualizarFiltroCredores() {
+    const filtroSelect = document.getElementById('filtro-credor');
+    const credoresUnicos = [...new Set(dividas.map(d => d.credor))];
+    
+    filtroSelect.innerHTML = `
+        <option value="">Todos os credores</option>
+        ${credoresUnicos.sort().map(credor => `
+            <option value="${credor}">${credor}</option>
+        `).join('')}
+    `;
+}
+
+function toggleMotivo(id) {
+    const motivoElement = document.getElementById(`motivo-${id}`);
+    if (motivoElement.classList.contains('show')) {
+        motivoElement.classList.remove('show');
+    } else {
+        motivoElement.classList.add('show');
+    }
+}
+
+function limparFormulario() {
+    document.getElementById('credor').value = '';
+    document.getElementById('motivo').value = '';
+    document.getElementById('valor').value = '';
+    document.getElementById('vencimento').value = '';
+    document.getElementById('num-parcelas').value = '2';
+}
+
+function exportarXLSX() {
+    const dividasAtivas = dividas.map(d => ({
+        Status: 'Ativa',
+        Credor: d.credor,
+        Motivo: d.motivo || '',
+        'Forma de Pagamento': d.formaPagamento,
+        'Tipo de Pagamento': d.tipoPagamento,
+        'Valor Total': d.valorTotal,
+        'Valor Restante': d.valorRestante,
+        Vencimento: d.vencimento,
+        'Número de Parcelas': d.numParcelas,
+        'Parcelas Restantes': d.parcelasRestantes,
+        'Próxima Parcela': d.proximaParcelaValor || d.valorParcela,
+        'Valor Parcela': d.valorParcela
+    }));
+
+    const dividasPagasData = dividasPagas.map(d => ({
+        Status: 'Paga',
+        Credor: d.credor,
+        Motivo: d.motivo || '',
+        'Forma de Pagamento': d.formaPagamento,
+        'Tipo de Pagamento': d.tipoPagamento,
+        'Valor Total': d.valorTotal,
+        'Valor Restante': 0,
+        Vencimento: d.vencimento,
+        'Número de Parcelas': d.numParcelas,
+        'Parcelas Restantes': 0,
+        'Data Pagamento': formatarData(d.dataPagamento),
+        'Histórico Pagamentos': JSON.stringify(d.historioPagamentos)
+    }));
+
+    const historicoData = historicoCarteira.map(h => ({
+        Data: formatarData(h.data),
+        Valor: h.valor,
+        Tipo: h.tipo,
+        Motivo: h.motivo || '',
+        Descrição: h.descricao || '',
+        'Credor Relacionado': h.dividaCredor || '',
+        'ID Dívida': h.dividaId || ''
+    }));
+
+    const wb = XLSX.utils.book_new();
+
+    const dividasSheet = XLSX.utils.json_to_sheet([...dividasAtivas, ...dividasPagasData]);
+    XLSX.utils.book_append_sheet(wb, dividasSheet, "Dívidas");
+
+    const historicoSheet = XLSX.utils.json_to_sheet(historicoData);
+    XLSX.utils.book_append_sheet(wb, historicoSheet, "Histórico");
+
+    const wscols = [
+        {wch: 12},
+        {wch: 25},
+        {wch: 30},
+        {wch: 20},
+        {wch: 20},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 40}
+    ];
+
+    [dividasSheet, historicoSheet].forEach(sheet => {
+        sheet['!cols'] = wscols;
+    });
+
+    XLSX.writeFile(wb, `gestor_financeiro_${formatarData(new Date())}.xlsx`);
+}
+
+function importarXLSX() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx';
+    
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                const dividasSheet = workbook.Sheets["Dívidas"];
+                if (dividasSheet) {
+                    const jsonData = XLSX.utils.sheet_to_json(dividasSheet);
+                    
+                    dividas = [];
+                    dividasPagas = [];
+                    
+                    jsonData.forEach(row => {
+                        if (row.Status && row.Credor) {
+                            const divida = {
+                                id: Date.now() + Math.random(),
+                                credor: capitalize(row.Credor),
+                                motivo: capitalize(row.Motivo || ''),
+                                formaPagamento: row['Forma de Pagamento'] || 'cartao',
+                                tipoPagamento: row['Tipo de Pagamento'] || 'avista',
+                                valorTotal: parseFloat(row['Valor Total']) || 0,
+                                valorRestante: parseFloat(row['Valor Restante']) || 0,
+                                vencimento: row.Vencimento || new Date().toISOString().split('T')[0],
+                                numParcelas: parseInt(row['Número de Parcelas']) || 1,
+                                parcelasRestantes: parseInt(row['Parcelas Restantes']) || 1,
+                                valorParcela: parseFloat(row['Valor Parcela']) || row['Valor Total'],
+                                proximaParcelaValor: parseFloat(row['Próxima Parcela']) || parseFloat(row['Valor Parcela']) || row['Valor Total'],
+                                historioPagamentos: row['Histórico Pagamentos'] ? JSON.parse(row['Histórico Pagamentos']) : []
+                            };
+                            
+                            if (row['Data Pagamento']) {
+                                divida.dataPagamento = typeof row['Data Pagamento'] === 'string' ? 
+                                    new Date(row['Data Pagamento'].split('/').reverse().join('-')) : 
+                                    new Date(row['Data Pagamento']);
+                            }
+                            
+                            if (row.Status.toLowerCase() === 'paga') {
+                                dividasPagas.push(divida);
+                            } else {
+                                dividas.push(divida);
+                            }
+                        }
+                    });
+                }
+                
+                const historicoSheet = workbook.Sheets["Histórico"];
+                if (historicoSheet) {
+                    const historicoData = XLSX.utils.sheet_to_json(historicoSheet);
+                    historicoCarteira = historicoData.map(h => ({
+                        valor: parseFloat(h.Valor) || 0,
+                        data: typeof h.Data === 'string' ? new Date(h.Data.split('/').reverse().join('-')) : new Date(h.Data),
+                        tipo: h.Tipo || 'entrada',
+                        motivo: h.Motivo || '',
+                        descricao: h.Descrição || '',
+                        dividaCredor: h['Credor Relacionado'] || '',
+                        dividaId: h['ID Dívida'] || ''
+                    }));
+                    
+                    saldoCarteira = historicoCarteira.reduce((acc, h) => {
+                        if (h.tipo === 'entrada' || h.tipo === 'estorno') {
+                            return acc + h.valor;
+                        } else if (h.tipo === 'saida') {
+                            return acc - h.valor;
+                        }
+                        return acc;
+                    }, 0);
+                }
+                
+                document.getElementById('saldo').textContent = saldoCarteira.toFixed(2);
+                atualizarHistoricoCarteira();
+                atualizarListaDividas();
+                atualizarListaDividasPagas();
+                atualizarFiltroCredores();
+                
+                alert('Importação concluída com sucesso!');
+            } catch (error) {
+                console.error('Erro na importação:', error);
+                alert('Erro ao importar o arquivo. Verifique se o formato está correto.');
+            }
+        };
+        
+        reader.readAsArrayBuffer(file);
+    };
+    
+    input.click();
+}
+
+function arquivarMesAnterior() {
+    const dataAtual = new Date();
+    const mesAnterior = new Date(dataAtual.getFullYear(), dataAtual.getMonth() - 1);
+    const chaveArquivo = `${mesAnterior.getFullYear()}-${String(mesAnterior.getMonth() + 1).padStart(2, '0')}`;
+    
+    arquivoMensal[chaveArquivo] = {
+        historicoCarteira: historicoCarteira.filter(h => {
+            const dataTransacao = new Date(h.data);
+            return dataTransacao.getMonth() === mesAnterior.getMonth() &&
+                   dataTransacao.getFullYear() === mesAnterior.getFullYear();
+        }),
+        dividasPagas: dividasPagas.filter(d => {
+            const dataPagamento = new Date(d.dataPagamento);
+            return dataPagamento.getMonth() === mesAnterior.getMonth() &&
+                   dataPagamento.getFullYear() === mesAnterior.getFullYear();
+        })
+    };
+    
+    historicoCarteira = historicoCarteira.filter(h => {
+        const dataTransacao = new Date(h.data);
+        return dataTransacao.getMonth() !== mesAnterior.getMonth() ||
+               dataTransacao.getFullYear() !== mesAnterior.getFullYear();
+    });
+    
+    dividasPagas = dividasPagas.filter(d => {
+        const dataPagamento = new Date(d.dataPagamento);
+        return dataPagamento.getMonth() !== mesAnterior.getMonth() ||
+               dataPagamento.getFullYear() !== mesAnterior.getFullYear();
+    });
+    
+    atualizarSelectArquivosMensais();
+}
+
+function retificarPagamento(dividaId, isPaga = false) {
+    let divida;
+    if (isPaga) {
+        divida = dividasPagas.find(d => String(d.id) === String(dividaId));
+    } else {
+        divida = dividas.find(d => String(d.id) === String(dividaId));
+    }
+    
+    if (!divida) {
+        console.error('Dívida não encontrada');
+        return;
+    }
+
+    const modal = document.getElementById('retificacao-modal');
+    modal.style.display = 'block';
+    
+    let dividaParaRetificar = {
+        id: dividaId,
+        isPaga: isPaga,
+        ultimoPagamento: divida.historioPagamentos[divida.historioPagamentos.length - 1]
+    };
+    
+    window.dividaParaRetificar = dividaParaRetificar;
+}
+
+function confirmarRetificacao() {
+    const motivo = document.getElementById('motivo-retificacao').value;
+    const descricao = document.getElementById('descricao-retificacao').value;
+    
+    if (!window.dividaParaRetificar || !window.dividaParaRetificar.ultimoPagamento) {
+        alert('Erro ao retificar pagamento');
+        return;
+    }
+    
+    const { id, isPaga, ultimoPagamento } = window.dividaParaRetificar;
+    const valorRetificacao = ultimoPagamento.valor;
+    
+    let divida;
+    if (isPaga) {
+        divida = dividasPagas.find(d => String(d.id) === String(id));
+    } else {
+        divida = dividas.find(d => String(d.id) === String(id));
+    }
+    
+    if (!divida) {
+        alert('Dívida não encontrada');
+        return;
+    }
+    
+    // Remover último pagamento
+    divida.historioPagamentos.pop();
+    
+    // Atualizar valor restante
+    if (!isPaga) {
+        divida.valorRestante += valorRetificacao;
+    }
+    
+    // Adicionar valor de volta à carteira
+    saldoCarteira += valorRetificacao;
+    
+    // Registrar estorno no histórico
+    historicoCarteira.push({
+        valor: valorRetificacao,
+        data: new Date(),
+        tipo: 'estorno',
+        motivo: motivo,
+        descricao: descricao,
+        dividaCredor: divida.credor,
+        dividaId: divida.id
+    });
+    
+    document.getElementById('saldo').textContent = saldoCarteira.toFixed(2);
+    atualizarHistoricoCarteira();
+    atualizarListaDividas();
+    atualizarListaDividasPagas();
+    atualizarEstatisticas();
+    fecharModal();
+    salvarDados();
+}
+
+function fecharModal() {
+    const modal = document.getElementById('retificacao-modal');
+    modal.style.display = 'none';
+    document.getElementById('motivo-retificacao').value = '';
+    document.getElementById('descricao-retificacao').selectedIndex = 0;
+    window.dividaParaRetificar = null;
+}
+
+function removerDivida(id) {
+    if (confirm('Tem certeza que deseja remover esta dívida?')) {
+        dividas = dividas.filter(d => d.id !== id);
+        atualizarListaDividas();
+        atualizarEstatisticas();
+        salvarDados();
+    }
+}
+
+function toggleStatVisibility(statId) {
+    const statElement = document.getElementById(statId);
+    const icon = document.getElementById(`icon-${statId}`);
+    
+    if (statElement.style.visibility === 'hidden') {
+        statElement.style.visibility = 'visible';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    } else {
+        statElement.style.visibility = 'hidden';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    }
+}
+
+function atualizarEstatisticas() {
+    const totalDividas = dividas.reduce((acc, div) => acc + div.valorRestante, 0);
+    const totalDividasPagas = dividasPagas.reduce((acc, div) => acc + div.valorTotal, 0);
+    const totalDividasMes = calcularTotalDividasMes();
+    const dividasPorCredor = calcularDividasPorCredor();
+    
+    document.getElementById('total-dividas').textContent = totalDividas.toFixed(2);
+    document.getElementById('total-dividas-pagas').textContent = totalDividasPagas.toFixed(2);
+    document.getElementById('total-dividas-mes').textContent = totalDividasMes.toFixed(2);
+    
+    const dividasMesCredorElement = document.getElementById('dividas-mes-credor');
+    dividasMesCredorElement.innerHTML = '';
+    
+    Object.entries(dividasPorCredor).forEach(([credor, valor]) => {
+        const div = document.createElement('div');
+        div.style.padding = '8px';
+        div.style.borderBottom = '1px solid #eee';
+        div.innerHTML = `<strong>${credor}:</strong> R$ ${valor.toFixed(2)}`;
+        dividasMesCredorElement.appendChild(div);
+    });
+}
+
+function calcularTotalDividasMes() {
+    return dividas.reduce((acc, div) => {
+        if (div.tipoPagamento === 'parcelado') {
+            return acc + div.proximaParcelaValor;
+        } else {
+            return acc + div.valorRestante;
+        }
+    }, 0);
+}
+
+function calcularDividasPorCredor() {
+    const dividasPorCredor = {};
+    dividas.forEach(div => {
+        const valorMes = div.tipoPagamento === 'parcelado' ? 
+            div.proximaParcelaValor : div.valorRestante;
+        
+        if (dividasPorCredor[div.credor]) {
+            dividasPorCredor[div.credor] += valorMes;
+        } else {
+            dividasPorCredor[div.credor] = valorMes;
+        }
+    });
+    return dividasPorCredor;
+}
+
+function exportarModeloVazio() {
+    const modeloVazio = {
+        Status: '',
+        Credor: '',
+        Motivo: '',
+        'Forma de Pagamento': '',
+        'Tipo de Pagamento': '',
+        'Valor Total': '',
+        'Valor Restante': '',
+        Vencimento: '',
+        'Número de Parcelas': '',
+        'Parcelas Restantes': '',
+        'Próxima Parcela': '',
+        'Valor Parcela': ''
+    };
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([modeloVazio]);
+    XLSX.utils.book_append_sheet(wb, ws, "Modelo");
+    
+    ws['!cols'] = [
+        {wch: 12},
+        {wch: 25},
+        {wch: 30},
+        {wch: 20},
+        {wch: 20},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15},
+        {wch: 15}
+    ];
+
+    XLSX.writeFile(wb, 'modelo_importacao.xlsx');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    carregarDados();
+});
+</script>
+</body>
+  </html>
